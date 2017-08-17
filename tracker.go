@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"errors"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	 pb "github.com/hyperledger/fabric/protos/peer"
 )
 
 type PharmaTrackerChaincode struct {
@@ -63,16 +63,18 @@ func main() {
 // ============================================================================================================================
 // Init - initialize the chaincode - No initialization required
 // ============================================================================================================================
-func (t *PharmaTrackerChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+func (t *PharmaTrackerChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("PharmaTrackerChaincode Is Starting Up")
-	return nil, nil
+	return shim.Success(nil)
 }
 
 
 // ============================================================================================================================
 // Invoke - Our entry point for Invocations
 // ============================================================================================================================
-func (t *PharmaTrackerChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+func (t *PharmaTrackerChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+	function, args := stub.GetFunctionAndParameters()
+	fmt.Println(" ")
 	fmt.Println("starting invoke, for - " + function)
 
 	// Handle different functions
@@ -89,13 +91,13 @@ func (t *PharmaTrackerChaincode) Invoke(stub shim.ChaincodeStubInterface, functi
 
 	// error out
 	fmt.Println("Received unknown invoke function name - " + function)
-	return nil, errors.New("Received unknown invoke function name - '" + function + "'")
+	return shim.Error("Received unknown invoke function name - '" + function + "'")
 }
 
 
 // ============================================================================================================================
 // Query - legacy function
 // ============================================================================================================================
-func (t *PharmaTrackerChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-	return nil, errors.New("Unknown supported call - Query()")
+func (t *PharmaTrackerChaincode) Query(stub shim.ChaincodeStubInterface) pb.Response {
+	return shim.Error("Unknown supported call - Query()")
 }
