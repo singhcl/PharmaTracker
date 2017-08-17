@@ -1,13 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
+	"errors"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
 // ============================================================================================================================
@@ -20,29 +17,29 @@ import (
 //     id      ,  authed_by_company
 // "m999999999", "united assets"
 // ============================================================================================================================
-func delete_asset(stub shim.ChaincodeStubInterface, args []string) (pb.Response) {
+func delete_asset(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	fmt.Println("starting delete_asset")
 
 	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+		return nil, errors.New("Incorrect number of arguments. Expecting 2")
 	}
 
 	id := args[0]
 	// get the asset
-	asset, err := get_asset(stub, id)
+	_, err := get_asset(stub, id)
 	if err != nil{
 		fmt.Println("Failed to find asset by id " + id)
-		return shim.Error(err.Error())
+		return nil, errors.New(err.Error())
 	}
 
 	// remove the asset
 	err = stub.DelState(id)                                                 //remove the key from chaincode state
 	if err != nil {
-		return shim.Error("Failed to delete state")
+		return nil, errors.New("Failed to delete state")
 	}
 
 	fmt.Println("- end delete_asset")
-	return shim.Success(nil)
+	return nil, nil
 }
 
 // ============================================================================================================================
@@ -55,48 +52,58 @@ func delete_asset(stub shim.ChaincodeStubInterface, args []string) (pb.Response)
 //     id      ,  color, size,     owner id    ,  authing company
 // "m999999999", "blue", "35", "o9999999999999", "united assets"
 // ============================================================================================================================
-func write_asset(stub shim.ChaincodeStubInterface, args []string) (pb.Response) {
+func write_asset(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	var err error
 	fmt.Println("starting init_asset")
 
-	/*if len(args) != 5 {
-		return shim.Error("Incorrect number of arguments. Expecting 5")
-	}*/
-
-	id := args[0]
-	color := strings.ToLower(args[1])
-	owner_id := args[3]
-	authed_by_company := args[4]
-	size, err := strconv.Atoi(args[2])
-	if err != nil {
-		return shim.Error("3rd argument must be a numeric string")
+	if len(args) != 17 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 17")
 	}
 
+	id := args[0]
 	//check if asset id already exists
 	asset, err := get_asset(stub, id)
 	if err == nil {
 		fmt.Println("This asset already exists - " + id)
 		fmt.Println(asset)
-		return shim.Error("This asset already exists - " + id)  //all stop a asset by this id exists
+		return nil, errors.New("This asset already exists - " + id)
 	}
 
 	//build the asset json string manually
 	str := `{
-		"docType":"asset", 
-		"id": "` + id + `", 
-		"color": "` + color + `", 
-		"size": ` + strconv.Itoa(size) + `, 
-		"owner": {
-			"id": "` + owner_id + `", 
-			"username": "` + owner.Username + `", 
-			"company": "` + owner.Company + `"
-		}
-	}`
+				"id": "` + args[0] + `", 
+				"type": "` + args[1] + `", 
+				"category": "` + args[2] + `",
+				"assetClass": "` + args[3] + `",
+				"assetTraceData": {
+					"owner": "` + args[4] + `", 
+					"status": "` + args[5] + `",
+					"eventDateTime": "` + args[6] + `",
+					"location": "` + args[7] + `",
+					"geoLocation": "` + args[8] + `"
+				},		
+				"assetData": {
+					"info": {
+						"name": "` + args[9] + `", 
+						"type": "` + args[10] + `",
+						"pkgSize": "` + args[11] + `",
+						"mfgDate": "` + args[12] + `",
+						"lotNo": "` + args[13] + `",
+						"expiryDate": "` + args[14] + `"
+					},
+					"children": [
+						{
+							"id": "` + args[15] + `", 
+							"type": "` + args[16] + `"							
+						}
+					]
+				}			
+			}`
 	err = stub.PutState(id, []byte(str))                         //store asset with id as key
 	if err != nil {
-		return shim.Error(err.Error())
+		return nil, errors.New(err.Error())
 	}
 
 	fmt.Println("- end init_asset")
-	return shim.Success(nil)
+	return nil, nil
 }
